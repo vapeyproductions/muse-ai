@@ -624,7 +624,25 @@ label:has(input:focus-visible) {
 .lookLibraryBadges b { display: grid; width: 14px; height: 14px; place-items: center; border: 1px solid white; border-radius: 50%; background: rgba(221,102,157,.9); color: white; font: .32rem var(--mono); }
 .lookLibraryCard > small { overflow: hidden; font: .34rem var(--mono); text-overflow: ellipsis; white-space: nowrap; }
 .selfieViewport { position: relative; overflow: hidden; margin: 12px; aspect-ratio: .78; border: 6px solid rgba(255,255,255,.88); border-radius: 23px; background: var(--pink-100); box-shadow: 0 16px 40px rgba(150,73,109,.18), var(--inset); }
-.selfieViewport > img { object-fit: contain; object-position: center; background: linear-gradient(145deg, #ffe8f2, #f0e8fb); }
+.selfieViewport > img { z-index: 1; object-fit: contain; object-position: center; background: linear-gradient(145deg, #ffe8f2, #f0e8fb); }
+.selfieViewportAssessment { isolation: isolate; background: linear-gradient(145deg, #fff9fc, #f3edf8); }
+.selfieViewportAssessment > .selfieViewportBackdrop {
+  z-index: 0;
+  object-fit: cover;
+  background: transparent;
+  filter: blur(26px) saturate(.72) brightness(1.08);
+  opacity: .34;
+  transform: scale(1.14);
+}
+.selfieViewportAssessment > .selfieViewportPortrait {
+  z-index: 1;
+  object-fit: contain;
+  object-position: center;
+  background: transparent;
+  border-radius: 18px;
+  filter: drop-shadow(0 14px 28px rgba(87,49,68,.16));
+  transform: scale(.88);
+}
 .selfieViewport::after { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(transparent 60%, rgba(91,49,69,.28)); content: ""; }
 .fullImageLaunch { position: absolute; z-index: 7; top: 10px; right: 10px; display: flex; gap: 6px; align-items: center; min-height: 28px; padding: 0 9px; border: 1px solid rgba(255,255,255,.94); border-radius: 9px; background: rgba(255,245,250,.8); box-shadow: var(--inset); color: var(--pink-600); font: .36rem var(--mono); letter-spacing: .06em; cursor: pointer; backdrop-filter: blur(12px); }
 .fullImageLaunch b { font-size: .65rem; }

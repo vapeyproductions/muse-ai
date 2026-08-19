@@ -477,6 +477,7 @@ function SelfieConsole({
   onShopping: () => void;
 }) {
   const current = variants[currentIndex];
+  const isAssessmentSelfie = current.sourceKind === "upload" && !current.makeup && !current.hair;
   const [fullImageOpen, setFullImageOpen] = useState(false);
 
   useEffect(() => {
@@ -557,8 +558,26 @@ function SelfieConsole({
           })}
         </div>
       </div>
-      <div className={`selfieViewport ${generating ? "selfieViewportGenerating" : ""}`}>
-        <Image src={current.imageUrl} alt={current.label} fill sizes="(max-width: 900px) 92vw, 30vw" unoptimized />
+      <div className={`selfieViewport ${isAssessmentSelfie ? "selfieViewportAssessment" : ""} ${generating ? "selfieViewportGenerating" : ""}`}>
+        {isAssessmentSelfie && (
+          <Image
+            className="selfieViewportBackdrop"
+            src={current.imageUrl}
+            alt=""
+            fill
+            sizes="(max-width: 900px) 92vw, 30vw"
+            unoptimized
+            aria-hidden="true"
+          />
+        )}
+        <Image
+          className={isAssessmentSelfie ? "selfieViewportPortrait" : "selfieViewportComposite"}
+          src={current.imageUrl}
+          alt={current.label}
+          fill
+          sizes="(max-width: 900px) 92vw, 30vw"
+          unoptimized
+        />
         <button
           className="fullImageLaunch"
           onClick={() => setFullImageOpen(true)}
