@@ -14,10 +14,10 @@ export function tryOnResultId({
   forceFresh: boolean;
 }) {
   const nonce = forceFresh ? crypto.randomUUID() : "reuse";
-  // Makeup fidelity v2 applies the original assigned reference directly when
-  // legacy transfer rejects it. Keep old renders in the user's library, but do
-  // not reuse them for a new request made against the corrected pipeline.
-  const pipelineVersion = kind === "makeup" ? "makeup-fidelity-v2" : "hair-v1";
+  // Makeup preserve-hair v3 never falls back to whole-image generation. Keep
+  // historical renders in the user's library, but never reuse one produced by
+  // the earlier fallback that could replace an existing hairstyle.
+  const pipelineVersion = kind === "makeup" ? "makeup-preserve-hair-v3" : "hair-v1";
   const hex = createHash("sha256")
     .update(["muse-try-on-v1", pipelineVersion, userId, sourceKey, kind, referenceUrl, nonce].join("\u0000"))
     .digest("hex")

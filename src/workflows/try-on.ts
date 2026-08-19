@@ -287,35 +287,6 @@ async function renderWithYouCam(input: TryOnWorkflowInput): Promise<TryOnWorkflo
         await invalidateGeneratedLookTemplate(lookId, input.kind, templateError);
       }
 
-      // Makeup Transfer occasionally rejects otherwise useful references. Apply
-      // the original assigned template directly before rebuilding it on a
-      // generic model; the original is the most faithful source of color,
-      // placement, and intensity for image generation.
-      if (input.kind === "makeup") {
-        try {
-          resultUrl = await generateDirectComposite(input, sourceFile, input.referenceUrl);
-          console.info("[try-on-workflow] original makeup template applied through image generation", {
-            kind: input.kind,
-            lookId,
-          });
-          return {
-            userId: input.userId,
-            resultId: input.resultId,
-            resultUrl,
-            outputLabel: input.outputLabel,
-            parentId: input.sourceSelfieId || null,
-            makeup: input.makeup,
-            hair: input.hair,
-          };
-        } catch (directOriginalError) {
-          console.warn("[try-on-workflow] direct application of original makeup template failed; rebuilding reference", {
-            kind: input.kind,
-            lookId,
-            message: directOriginalError instanceof Error ? directOriginalError.message : String(directOriginalError),
-          });
-        }
-      }
-
       const claim = await claimGeneratedLookTemplate({
         lookId,
         kind: input.kind,
@@ -348,14 +319,27 @@ async function renderWithYouCam(input: TryOnWorkflowInput): Promise<TryOnWorkflo
         } else {
           await invalidateGeneratedLookTemplate(lookId, input.kind, replacementError);
         }
-        console.warn("[try-on-workflow] rebuilt template rejected; applying it through image generation", {
+        const replacementMessage = replacementError instanceof Error
+          ? replacementError.message
+          : String(replacementError);
+        if (input.kind === "makeup") {
+          // Whole-image generation can alter identity, hair, and background. A
+          // makeup render must never take that path, especially when its source
+          // already contains a hairstyle the user chose to preserve.
+          console.warn("[try-on-workflow] makeup preservation guard stopped unsafe full-image generation", {
+            kind: input.kind,
+            lookId,
+            message: replacementMessage,
+          });
+          throw new Error(`makeup preservation guard: ${replacementMessage}`);
+        }
+        console.warn("[try-on-workflow] rebuilt hair template rejected; applying it through image generation", {
           kind: input.kind,
           lookId,
-          message: replacementError instanceof Error ? replacementError.message : String(replacementError),
+          message: replacementMessage,
         });
         try {
-          const directReferenceUrl = input.kind === "makeup" ? input.referenceUrl : replacementUrl;
-          resultUrl = await generateDirectComposite(input, sourceFile, directReferenceUrl);
+          resultUrl = await generateDirectComposite(input, sourceFile, replacementUrl);
           console.info("[try-on-workflow] direct generated composite completed", {
             kind: input.kind,
             lookId,
@@ -405,6 +389,11 @@ async function renderWithYouCam(input: TryOnWorkflowInput): Promise<TryOnWorkflo
     });
     if (isRetryableServiceFailure(error)) {
       throw new RetryableError(message, { retryAfter: "3s" });
+    }
+    if (/makeup preservation guard/i.test(message)) {
+      throw new FatalError(
+        "Muse stopped this makeup render because YouCam could not apply it without changing the selected hairstyle. Try another makeup look or source photo.",
+      );
     }
     if (/replacement template|generated replacement|image-to-image\/youcam|direct generated composite/i.test(message)) {
       throw new FatalError("Muse could not complete this look through either rendering method. Please try again later.");
