@@ -174,10 +174,6 @@ The deployed experience was also verified in a real browser against the landing 
 - YouCam outputs can be uncertain. The UI surfaces detector failures and allows recalibration rather than silently inventing measurements.
 - Product links are live catalog results from independent Shopify merchants; availability, price, claims, and suitability remain the merchant's responsibility.
 
-## Demo video
-
-The Devpost video will be a 1–3 minute walkthrough following [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md). The production app and public read-only sample-board entry points are available now.
-
 ## License and media rights
 
 The original Muse source code is released under the [MIT License](LICENSE). Celebrity/creator reference images, Pinterest source links, workbook contents, YouCam services, Shopify product data, fonts, and other third-party materials are **not** relicensed by that MIT grant; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). A commercial release should replace or separately license every external reference asset.
