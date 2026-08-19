@@ -9,24 +9,29 @@ import {
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+export const dynamic = "force-dynamic";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_SERVER_UPLOAD_BYTES = 4 * 1024 * 1024;
+const PRIVATE_NO_STORE = {
+  "Cache-Control": "private, no-store, max-age=0",
+  Vary: "Cookie",
+};
 
 export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) return NextResponse.json({ error: "Sign in to access saved selfies." }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Sign in to access saved selfies." }, { status: 401, headers: PRIVATE_NO_STORE });
   const [selfies, assessmentPhotos] = await Promise.all([
     selfiesForUser(session.user.id),
     assessmentPhotoSetForUser(session.user.id),
   ]);
-  if (!selfies.length) return NextResponse.json({ error: "No saved selfie yet." }, { status: 404 });
+  if (!selfies.length) return NextResponse.json({ error: "No saved selfie yet." }, { status: 404, headers: PRIVATE_NO_STORE });
   const currentAssessmentId = assessmentPhotos?.face.id;
   const library = selfies.map((selfie) => ({
     ...selfie,
     deletable: selfie.sourceKind === "generated" || selfie.id !== currentAssessmentId,
   }));
-  return NextResponse.json({ selfie: library[0], selfies: library, assessmentPhotos });
+  return NextResponse.json({ selfie: library[0], selfies: library, assessmentPhotos }, { headers: PRIVATE_NO_STORE });
 }
 
 export async function POST(request: Request) {

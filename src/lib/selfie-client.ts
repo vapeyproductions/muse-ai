@@ -99,7 +99,7 @@ export async function loadMuseSelfieFile(selfie: PersistedSelfie): Promise<Loade
 }
 
 export async function loadMuseSelfies() {
-  const response = await fetch("/api/selfies");
+  const response = await fetch("/api/selfies", { cache: "no-store" });
   if (response.status === 404) return [];
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Saved selfies unavailable.");
@@ -122,7 +122,7 @@ export async function deleteMuseSelfie(id: string) {
 }
 
 export async function loadLatestAssessmentPhotoSet(): Promise<LoadedAssessmentPhotoSet | null> {
-  const response = await fetch("/api/selfies");
+  const response = await fetch("/api/selfies", { cache: "no-store" });
   if (response.status === 404) return null;
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Saved assessment photos unavailable.");

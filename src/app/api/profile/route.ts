@@ -8,6 +8,12 @@ import { deleteSkinProfileForUser } from "@/lib/skin-profile-store";
 import { clearCurrentAssessmentForUser } from "@/lib/selfie-store";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const PRIVATE_NO_STORE = {
+  "Cache-Control": "private, no-store, max-age=0",
+  Vary: "Cookie",
+};
 
 const REPRESENTATION_TAGS = new Set<string>(REPRESENTATION_OPTIONS.map(({ id }) => id));
 
@@ -35,10 +41,10 @@ function validMatches(value: unknown): value is MuseMatchSnapshot[] {
 
 export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) return NextResponse.json({ error: "Sign in to access your Muse profile." }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Sign in to access your Muse profile." }, { status: 401, headers: PRIVATE_NO_STORE });
   const profile = await museProfileForUser(session.user.id);
-  if (!profile) return NextResponse.json({ error: "No saved Muse profile yet." }, { status: 404 });
-  return NextResponse.json({ profile });
+  if (!profile) return NextResponse.json({ error: "No saved Muse profile yet." }, { status: 404, headers: PRIVATE_NO_STORE });
+  return NextResponse.json({ profile }, { headers: PRIVATE_NO_STORE });
 }
 
 export async function PUT(request: Request) {

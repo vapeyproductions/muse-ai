@@ -809,6 +809,7 @@ export default function ResultsWorkspace({
   onHome,
   onRestart,
   accountName,
+  workspaceStorageKey,
   onSignOut,
   onRequireAccount,
   demoBoard,
@@ -822,6 +823,7 @@ export default function ResultsWorkspace({
   onHome: () => void;
   onRestart: () => void;
   accountName?: string;
+  workspaceStorageKey?: string;
   onSignOut?: () => void;
   onRequireAccount: () => void;
   demoBoard?: DemoBoardSnapshot;
@@ -863,7 +865,7 @@ export default function ResultsWorkspace({
   const demoInitialVariant = demoVariants.find((variant) => variant.id === demoBoard?.assessmentSelfieId) || demoVariants[0];
   const [mode, setMode] = useState<WorkspaceMode>("muses");
   const [journey, setJourney] = useState<JourneyMode>("inspiration");
-  const [restoredWorkspaceAccount, setRestoredWorkspaceAccount] = useState<string | null>(null);
+  const [restoredWorkspaceScope, setRestoredWorkspaceScope] = useState<string | null>(null);
   const [activeMuseId, setActiveMuseId] = useState<string | null>(null);
   const [museFilter, setMuseFilter] = useState("all");
   const [keywordFilter, setKeywordFilter] = useState("all");
@@ -918,12 +920,12 @@ export default function ResultsWorkspace({
   }, [defaultPhoto]);
 
   useEffect(() => {
-    if (!accountName) {
-      setRestoredWorkspaceAccount(null);
+    if (!workspaceStorageKey) {
+      setRestoredWorkspaceScope(null);
       return;
     }
     try {
-      const savedWorkspace = window.sessionStorage.getItem(`muse-workspace:${accountName}`);
+      const savedWorkspace = window.sessionStorage.getItem(`muse-workspace:${workspaceStorageKey}`);
       if (savedWorkspace) {
         const parsed = JSON.parse(savedWorkspace) as { journey?: unknown; currentVariantId?: unknown };
         if (parsed.journey === "inspiration" || parsed.journey === "achieve" || parsed.journey === "shopping") {
@@ -934,18 +936,18 @@ export default function ResultsWorkspace({
         }
       }
     } catch {
-      window.sessionStorage.removeItem(`muse-workspace:${accountName}`);
+      window.sessionStorage.removeItem(`muse-workspace:${workspaceStorageKey}`);
     }
-    setRestoredWorkspaceAccount(accountName);
-  }, [accountName]);
+    setRestoredWorkspaceScope(workspaceStorageKey);
+  }, [workspaceStorageKey]);
 
   useEffect(() => {
-    if (!accountName || restoredWorkspaceAccount !== accountName) return;
-    window.sessionStorage.setItem(`muse-workspace:${accountName}`, JSON.stringify({
+    if (!workspaceStorageKey || restoredWorkspaceScope !== workspaceStorageKey) return;
+    window.sessionStorage.setItem(`muse-workspace:${workspaceStorageKey}`, JSON.stringify({
       journey,
       currentVariantId,
     }));
-  }, [accountName, currentVariantId, journey, restoredWorkspaceAccount]);
+  }, [currentVariantId, journey, restoredWorkspaceScope, workspaceStorageKey]);
 
   useEffect(() => {
     if (!accountName || readOnlyDemo) return;
@@ -966,11 +968,12 @@ export default function ResultsWorkspace({
           deletable: selfie.deletable,
         }));
         if (!library.length) return;
-        const libraryIds = new Set(library.map((variant) => variant.id));
-        setVariants((current) => [
-          ...current.filter((variant) => !libraryIds.has(variant.id)),
-          ...library,
-        ]);
+        setVariants(library);
+        setCurrentVariantId((current) => library.some((variant) => variant.id === current)
+          ? current
+          : defaultPhoto?.storedSelfieId && library.some((variant) => variant.id === defaultPhoto.storedSelfieId)
+            ? defaultPhoto.storedSelfieId
+            : library[0].id);
       })
       .catch((error) => {
         if (!cancelled) setNotice(error instanceof Error ? error.message : "Your photo library could not be loaded.");
@@ -978,7 +981,7 @@ export default function ResultsWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [accountName, readOnlyDemo]);
+  }, [accountName, defaultPhoto?.storedSelfieId, readOnlyDemo, workspaceStorageKey]);
 
   const changeMode = (nextMode: WorkspaceMode) => {
     setJourney("inspiration");
@@ -989,7 +992,7 @@ export default function ResultsWorkspace({
   };
 
   const restartExperience = () => {
-    if (accountName) window.sessionStorage.removeItem(`muse-workspace:${accountName}`);
+    if (workspaceStorageKey) window.sessionStorage.removeItem(`muse-workspace:${workspaceStorageKey}`);
     onRestart();
   };
 
@@ -1167,7 +1170,7 @@ export default function ResultsWorkspace({
           <button className="recalibrate" onClick={readOnlyDemo ? onRequireAccount : restartExperience}>{readOnlyDemo ? "Create your Muse" : "Recalibrate"}</button>
           {accountName && onSignOut && (
             <button className="cyberAccount" onClick={onSignOut} title="Sign out of Muse">
-              <strong>@{accountName}</strong><span>sign out</span>
+              <span>@{accountName}</span><strong>Sign out</strong>
             </button>
           )}
         </div>

@@ -58,7 +58,7 @@ class AnalysisRequestError extends Error {
   }
 }
 
-async function portraitAssessmentFile(file: File) {
+async function fallbackPortraitAssessmentFile(file: File) {
   const bitmap = await createImageBitmap(file);
   if (Math.min(bitmap.width, bitmap.height) < 320) {
     bitmap.close();
@@ -71,12 +71,12 @@ async function portraitAssessmentFile(file: File) {
   let sourceHeight = bitmap.height;
 
   if (bitmap.width > bitmap.height) {
-    // Landscape uploads usually include generous studio/background space. A
-    // head-and-shoulders crop brings the face into YouCam's recommended range.
-    sourceHeight = bitmap.height * .64;
+    // Keep most of a landscape frame so a fallback crop does not trim the
+    // hairline or chin. The server path below uses attention-based centering.
+    sourceHeight = bitmap.height * .9;
     sourceWidth = sourceHeight * targetRatio;
     sourceX = (bitmap.width - sourceWidth) / 2;
-    sourceY = (bitmap.height - sourceHeight) * .22;
+    sourceY = (bitmap.height - sourceHeight) / 2;
   } else if (bitmap.width / bitmap.height > targetRatio) {
     sourceWidth = bitmap.height * targetRatio;
     sourceX = (bitmap.width - sourceWidth) / 2;
@@ -104,6 +104,34 @@ async function portraitAssessmentFile(file: File) {
   });
   const baseName = file.name.replace(/\.[^.]+$/, "") || "muse-photo";
   return new File([blob], `${baseName}-portrait.jpg`, { type: "image/jpeg", lastModified: file.lastModified });
+}
+
+async function portraitAssessmentFile(file: File) {
+  const form = new FormData();
+  form.append("file", file, file.name);
+  try {
+    const response = await fetch("/api/portrait-crop", {
+      method: "POST",
+      body: form,
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({})) as { error?: string };
+      if (response.status >= 400 && response.status < 500) {
+        throw new Error(payload.error || "Muse could not prepare this photo.");
+      }
+      throw new TypeError(payload.error || "Portrait preparation is temporarily unavailable.");
+    }
+    const blob = await response.blob();
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "muse-photo";
+    return new File([blob], `${baseName}-portrait.jpg`, {
+      type: "image/jpeg",
+      lastModified: file.lastModified,
+    });
+  } catch (error) {
+    if (error instanceof Error && !(error instanceof TypeError)) throw error;
+    return fallbackPortraitAssessmentFile(file);
+  }
 }
 
 const ANALYSIS_TASKS = [
@@ -261,12 +289,11 @@ function Landing({
             <button className="primaryButton" onClick={onStart}>
               Begin your analysis <span aria-hidden="true">↗</span>
             </button>
-            <button className="textButton sampleBoardButton" onClick={() => onDemo("testing123")}>
-              Explore Sample Board: User 1
-            </button>
-            <button className="textButton sampleBoardButton" onClick={() => onDemo("testing12345")}>
-              Explore Sample Board: User 2
-            </button>
+            <div className="sampleBoardPicker" aria-label="Explore a sample board">
+              <span>Explore sample boards:</span>
+              <button className="textButton sampleBoardButton" onClick={() => onDemo("testing123")}>User 1</button>
+              <button className="textButton sampleBoardButton" onClick={() => onDemo("testing12345")}>User 2</button>
+            </div>
           </div>
           <div className="heroMeta">
             <span>10–15 minutes</span>
@@ -1206,23 +1233,26 @@ export default function MuseExperience({ catalog }: { catalog: MuseCatalog }) {
     const userId = session?.user.id;
     if (!userId || loadedAccountStateFor.current === userId) return;
     loadedAccountStateFor.current = userId;
+    setScreen("restoring");
+    setDemoBoard(null);
+    setAnalysis(null);
+    setRepresentationPreferences([]);
+    setSavedMatches([]);
+    setFacePhoto((current) => {
+      if (current?.preview.startsWith("blob:")) URL.revokeObjectURL(current.preview);
+      return undefined;
+    });
     let cancelled = false;
     void Promise.all([loadMuseProfile(), loadLatestAssessmentFacePhoto()])
-      .then(async ([savedProfile, latest]) => {
-        if (cancelled) return;
+      .then(([savedProfile, latest]) => {
+        if (cancelled) {
+          if (latest?.preview.startsWith("blob:")) URL.revokeObjectURL(latest.preview);
+          return;
+        }
         if (latest) {
-          const preparedFile = latest.selfie.sourceKind === "upload"
-            ? await portraitAssessmentFile(latest.file).catch(() => latest.file)
-            : latest.file;
-          const preparedPreview = preparedFile === latest.file ? latest.preview : URL.createObjectURL(preparedFile);
-          if (preparedFile !== latest.file) URL.revokeObjectURL(latest.preview);
-          if (cancelled) {
-            URL.revokeObjectURL(preparedPreview);
-            return;
-          }
-          setFacePhoto((current) => current || {
-            file: preparedFile,
-            preview: preparedPreview,
+          setFacePhoto({
+            file: latest.file,
+            preview: latest.preview,
             storedSelfieId: latest.selfie.id,
             origin: latest.selfie.sourceKind === "upload" ? "upload" : "stored",
           });
@@ -1234,7 +1264,7 @@ export default function MuseExperience({ catalog }: { catalog: MuseCatalog }) {
           awaitingPostAuthRestore.current = false;
           setScreen("results");
           window.scrollTo({ top: 0 });
-        } else if (awaitingPostAuthRestore.current) {
+        } else {
           awaitingPostAuthRestore.current = false;
           setScreen("assessment");
         }
@@ -1302,7 +1332,10 @@ export default function MuseExperience({ catalog }: { catalog: MuseCatalog }) {
     setDemoBoard(null);
     setRepresentationPreferences([]);
     setSavedMatches([]);
-    setFacePhoto(undefined);
+    setFacePhoto((current) => {
+      if (current?.preview.startsWith("blob:")) URL.revokeObjectURL(current.preview);
+      return undefined;
+    });
     loadedAccountStateFor.current = "";
     awaitingPostAuthRestore.current = false;
     setScreen("home");
@@ -1391,6 +1424,7 @@ export default function MuseExperience({ catalog }: { catalog: MuseCatalog }) {
   if (screen === "results" && analysis) {
     return (
       <Results
+        key={demoBoard ? `demo:${demoBoard.account}` : `user:${session?.user.id || accountName}`}
         catalog={catalog}
         analysis={analysis}
         aesthetics={[]}
@@ -1400,6 +1434,7 @@ export default function MuseExperience({ catalog }: { catalog: MuseCatalog }) {
         onHome={goHome}
         onRestart={restartAssessment}
         accountName={demoBoard ? undefined : accountName || undefined}
+        workspaceStorageKey={demoBoard ? undefined : session?.user.id || undefined}
         onSignOut={!demoBoard && accountName ? signOut : undefined}
         demoBoard={demoBoard || undefined}
         onRequireAccount={() => {
