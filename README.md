@@ -6,7 +6,7 @@ Muse is a personalized beauty-inspiration workspace built for the [YouCam API Sk
 
 [Open the live app](https://muse-black-phi.vercel.app) · [Explore User 1](https://muse-black-phi.vercel.app) · [Explore User 2](https://muse-black-phi.vercel.app)
 
-> The two sample boards are public and read-only. Choose **Explore Sample Board: User 1** or **User 2** on the landing page. Creating an assessment, rendering a look, or changing a product catalog requires an account.
+> The two sample-board entry points are public and read-only. Choose **Explore Sample Board: User 1** or **User 2** on the landing page. Each reflects the current saved state of its designated demo account. Creating an assessment, rendering a look, or changing a product catalog requires an account.
 
 ![Muse landing page](docs/screenshots/muse-landing.png)
 
@@ -176,7 +176,7 @@ The deployed experience was also verified in a real browser against the landing 
 
 ## Demo video
 
-The Devpost video will be a 1–3 minute walkthrough following [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md). The production app and both read-only sample boards are available now.
+The Devpost video will be a 1–3 minute walkthrough following [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md). The production app and public read-only sample-board entry points are available now.
 
 ## License and media rights
 
