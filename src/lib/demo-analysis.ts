@@ -1,0 +1,27 @@
+import type { UserAnalysis } from "./muse-types";
+
+export const demoAnalysis: UserAnalysis = {
+  age: 28,
+  gender: "female",
+  fitzpatrick: 5,
+  skinColor: "#9A654D",
+  eyeColor: "Amber",
+  lipColor: "#9F4F55",
+  eyebrowColor: "Black",
+  hairColor: "Black",
+  faceShape: "Diamond",
+  eyeShape: "Almond",
+  eyeSize: "Average",
+  eyeAngle: "Upturned",
+  eyeSpacing: "Wide-set",
+  eyelidType: "Double-lid",
+  eyebrowShape: "Soft Angled",
+  eyebrowThickness: "Average",
+  eyebrowSpacing: "Close",
+  eyebrowLength: "Short",
+  lipShape: "Full",
+  noseWidth: "Narrow",
+  noseLength: "Average",
+  cheekbones: "High Cheekbone",
+  source: "demo",
+};
